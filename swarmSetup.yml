@@ -7,7 +7,9 @@
 
   tasks:
     - name: Start visualization container
-      command: docker run -it -d -p 8080:8080 -e HOST={{ ansible_nodename }} -v /var/run/docker.sock:/var/run/docker.sock alexellis2/visualizer-arm
+      command: docker run -it -d -p 8080:8080 -e HOST={{ ansible_default_ipv4.address }} -v /var/run/docker.sock:/var/run/docker.sock alexellis2/visualizer-arm
+    - debug:
+        msg: "Open http://{{ ansible_default_ipv4.address }}:8080 to see the Swarm!"
 
     - name: Initialize the swarm
       command: docker swarm init
@@ -22,18 +24,6 @@
       register: managerToken
     - debug: msg="Manager Token={{ managerToken.stdout }}"
 
-#    - name: Turn the red led off
-#      shell: "{{ red.ledOff }}"
-
-#    - name: Turn the blue led on
-#      shell: "{{ blue.ledOn }}"
-
-- name: Print the Swarm Visualizer URL
-  hosts: 127.0.0.1
-
-  tasks:
-    - command: "echo 'Open http://{{ hostvars[groups['swarmManagers'][0]]['ansible_nodename'] }}:8080' to see the Swarm!"
-
 - name: Add the worker nodes to the swarm
   hosts: swarmNodes
   become: true
@@ -42,30 +32,6 @@
 
   tasks:
     - name: Join the worker node to the swarm
-      command: docker swarm join --token {{ hostvars[groups['swarmManagers'][0]]['workerToken']['stdout'] }} {{ hostvars[groups['swarmManagers'][0]]['ansible_eth0']['ipv4']['address'] }}:2377
+      command: docker swarm join --token {{ hostvars[groups['swarmManagers'][0]]['workerToken']['stdout'] }} {{ hostvars[groups['swarmManagers'][0]].ansible_default_ipv4.address }}:2377
       register: result
     - debug: msg="{{ result.stdout }}"
-
-#    - name: Turn the red led off
-#      shell: "{{ red.ledOff }}"
-
-#    - name: Turn the green led on
-#      shell: "{{ green.ledOn }}"
-
-- name: Add the manager nodes to the swarm
-  hosts: additionalSwarmManagers
-  become: true
-  vars_files:
-    - vars.yml
-
-  tasks:
-    - name: Join the manager node to the swarm
-      command: docker swarm join --token {{ hostvars[groups['swarmManagers'][0]]['managerToken']['stdout'] }} {{ hostvars[groups['swarmManagers'][0]]['ansible_eth0']['ipv4']['address'] }}:2377
-      register: result
-    - debug: msg="{{ result.stdout }}"
-
-#    - name: Turn the red led off
-#      shell: "{{ red.ledOff }}"
-
-#    - name: Turn the blue led on
-#      shell: "{{ blue.ledOn }}"
