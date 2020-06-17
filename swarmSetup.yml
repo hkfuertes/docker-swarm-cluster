@@ -22,17 +22,17 @@
       register: managerToken
     - debug: msg="Manager Token={{ managerToken.stdout }}"
 
-    - name: Turn the red led off
-      shell: "{{ red.ledOff }}"
+#    - name: Turn the red led off
+#      shell: "{{ red.ledOff }}"
 
-    - name: Turn the blue led on
-      shell: "{{ blue.ledOn }}"
+#    - name: Turn the blue led on
+#      shell: "{{ blue.ledOn }}"
 
-- name: Open Safari browser with a specific URL
+- name: Print the Swarm Visualizer URL
   hosts: 127.0.0.1
 
   tasks:
-    - command: "open http://{{ hostvars[groups['swarmManagers'][0]]['ansible_nodename'] }}:8080"
+    - command: "echo 'Open http://{{ hostvars[groups['swarmManagers'][0]]['ansible_nodename'] }}:8080' to see the Swarm!"
 
 - name: Add the worker nodes to the swarm
   hosts: swarmNodes
@@ -46,11 +46,11 @@
       register: result
     - debug: msg="{{ result.stdout }}"
 
-    - name: Turn the red led off
-      shell: "{{ red.ledOff }}"
+#    - name: Turn the red led off
+#      shell: "{{ red.ledOff }}"
 
-    - name: Turn the green led on
-      shell: "{{ green.ledOn }}"
+#    - name: Turn the green led on
+#      shell: "{{ green.ledOn }}"
 
 - name: Add the manager nodes to the swarm
   hosts: additionalSwarmManagers
@@ -64,8 +64,8 @@
       register: result
     - debug: msg="{{ result.stdout }}"
 
-    - name: Turn the red led off
-      shell: "{{ red.ledOff }}"
+#    - name: Turn the red led off
+#      shell: "{{ red.ledOff }}"
 
-    - name: Turn the blue led on
-      shell: "{{ blue.ledOn }}"
+#    - name: Turn the blue led on
+#      shell: "{{ blue.ledOn }}"
