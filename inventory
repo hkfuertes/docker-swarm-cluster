@@ -1,10 +1,11 @@
 # Inventory file for a six-node Raspberry Pi cluster
 
 [swarmManagers]
-10.9.8.60
+10.9.8.63
 
 [swarmNodes]
 10.9.8.59
+10.9.8.60
 
 [swarm:children]
 swarmManagers

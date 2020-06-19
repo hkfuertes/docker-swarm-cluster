@@ -2,15 +2,8 @@
 - name: Set up the initial swarm manager
   hosts: swarmManagers[0]
   become: true
-  vars_files:
-    - vars.yml
 
   tasks:
-    - name: Start visualization container
-      command: docker run -it -d -p 8080:8080 -e HOST={{ ansible_default_ipv4.address }} -v /var/run/docker.sock:/var/run/docker.sock alexellis2/visualizer-arm
-    - debug:
-        msg: "Open http://{{ ansible_default_ipv4.address }}:8080 to see the Swarm!"
-
     - name: Initialize the swarm
       command: docker swarm init
 
@@ -27,11 +20,59 @@
 - name: Add the worker nodes to the swarm
   hosts: swarmNodes
   become: true
-  vars_files:
-    - vars.yml
 
   tasks:
     - name: Join the worker node to the swarm
       command: docker swarm join --token {{ hostvars[groups['swarmManagers'][0]]['workerToken']['stdout'] }} {{ hostvars[groups['swarmManagers'][0]].ansible_default_ipv4.address }}:2377
       register: result
     - debug: msg="{{ result.stdout }}"
+
+- name: Deploying Registry as a Service in the Swarm
+  hosts: swarmManagers[0]
+  become: true
+
+  tasks:
+    - name: Create self-signed certificates
+      command: >
+        openssl req -x509 -nodes -subj '/CN={{ ansible_default_ipv4.address }}' -days 365
+        -newkey rsa:4096 -sha256 -keyout /etc/ssl/private/server.key -out /etc/ssl/certs/server.crt
+        creates=/etc/ssl/certs/server.crt
+
+    - name: Sharing certificates with nodes
+      command: >
+        ssh {{ item.ansible_default_ipv4.address }} mkdir -p /etc/docker/certs.d/{{ ansible_default_ipv4.address }}:5000 && \
+        scp /etc/ssl/certs/server.crt {{ item.ansible_default_ipv4.address }}:/etc/docker/certs.d/{{ ansible_default_ipv4.address }}:5000/ca.cert && \
+      with_items: {{ groups['swarmNodes'] }}
+
+    - name: Creating folder for persistent Registry Service
+      command: mkdir -p /mnt/registry-volume
+
+    - name: Starting Registry service
+      command: >
+        docker service create --name registry --publish=5000:5000 \
+        --constraint=node.role==manager \
+        --mount=type=bind,src=/mnt/registry-volume,dst=/var/lib/registry
+        --mount=type=bind,src=/etc/ssl,dst=/certs \
+        -e REGISTRY_HTTP_ADDR=0.0.0.0:5000 \
+        -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/certs/server.crt \
+        -e REGISTRY_HTTP_TLS_KEY=/certs/private/server.key \
+        registry:latest
+
+- name: Deploying Portainer.io as Service in the Swarm
+  hosts: swarmManagers[0]
+  become: true
+
+  tasks:
+    - name: Creating folder for persistent Portainer.io Service
+      command: mkdir -p /mnt/portainer-volume
+
+    - name: Starting Registry service
+      command: >
+        docker service create \
+        --name portainer \
+        --publish 9000:9000 \
+        --replicas=1 \
+        --constraint 'node.role == manager' \
+        --mount type=bind,src=//var/run/docker.sock,dst=/var/run/docker.sock \
+        --mount type=bind,src=/mnt/portainer-volume,dst=/data \
+        portainer/portainer -H unix:///var/run/docker.sock --no-auth
