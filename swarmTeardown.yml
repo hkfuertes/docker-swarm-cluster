@@ -11,12 +11,6 @@
       register: resultRemoveNode
     - debug: msg="{{ resultRemoveNode.stdout }}"
 
-    - name: Turn the green led off
-      shell: "{{ green.ledOff }}"
-
-    - name: Turn the red led on
-      shell: "{{ red.ledOn }}"
-
 - name: Remove the initial swarm manager from the swarm
   hosts: swarmManagers[0]
   become: true
