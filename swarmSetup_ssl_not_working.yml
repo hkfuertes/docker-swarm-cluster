@@ -32,6 +32,17 @@
   become: yes
 
   tasks:
+    - name: Create self-signed certificates
+      command: >
+        openssl req -x509 -nodes -subj '/CN={{ ansible_default_ipv4.address }}' -days 365
+        -newkey rsa:4096 -sha256 -keyout /etc/ssl/private/server.key -out /etc/ssl/certs/server.crt
+        creates=/etc/ssl/certs/server.crt 
+        
+    - name: Printing out the public key
+      command: cat /etc/ssl/certs/server.crt
+      register: server_crt
+    - debug: msg="{{server_crt.stdout}}"
+
     - name: Creating folder for persistent Registry Service
       file:
         path: /mnt/registry-volume
@@ -48,14 +59,18 @@
         -e REGISTRY_HTTP_TLS_KEY=/certs/private/server.key \
         registry:latest
 
-- name: Adding master as insecure registry server
+- name: Sharing certificates with nodes
   hosts: all
   become: true
+
   tasks:
-    - name: Adding insecure registry server into /etc/docker/daemon.json
-      copy: 
-        content: "{ \"insecure-registries\": [ {{ hostvars[groups['swarmManagers'][0]].ansible_default_ipv4.address }}:5000 ] }"
-        dest: /etc/docker/daemon.json
+    - name: Create cert.d directory
+      file:
+        path: /etc/docker/certs.d/{{ hostvars[groups['swarmManagers'][0]].ansible_default_ipv4.address }}:5000
+        state: directory
+
+    - name: Writing stored cert into files
+      copy: content="{{ hostvars[groups['swarmManagers'][0]]['server_crt']['stdout'] }}" dest=/etc/docker/certs.d/{{ hostvars[groups['swarmManagers'][0]].ansible_default_ipv4.address }}:5000/ca.cert
 
 - name: Deploying Portainer.io as Service in the Swarm
   hosts: swarmManagers[0]

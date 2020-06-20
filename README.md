@@ -72,3 +72,11 @@ Teardown the cluster:
 Shutdown the Raspberry Pi stack:
 
 		ansible-playbook -i inventory shutdown.yml
+
+### Pushing and Pulling images to registry
+There is a registry also deployed as part of the swarm, to push and pull images from/to it just use:
+
+```
+docker push <managarNode_ip>:5000/<image_name>:<image_tag>
+docker pull <managarNode_ip>:5000/<image_name>:<image_tag>
+```
