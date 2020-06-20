@@ -41,11 +41,8 @@
       command: >
         docker service create --name registry --publish=5000:5000 \
         --constraint=node.role==manager \
-        --mount=type=bind,src=/mnt/registry-volume,dst=/var/lib/registry
-        --mount=type=bind,src=/etc/ssl,dst=/certs \
+        --mount=type=bind,src=/mnt/registry-volume,dst=/var/lib/registry \
         -e REGISTRY_HTTP_ADDR=0.0.0.0:5000 \
-        -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/certs/server.crt \
-        -e REGISTRY_HTTP_TLS_KEY=/certs/private/server.key \
         registry:latest
 
 - name: Adding master as insecure registry server
@@ -57,7 +54,7 @@
         content: "{ \"insecure-registries\": [ {{ hostvars[groups['swarmManagers'][0]].ansible_default_ipv4.address }}:5000 ] }"
         dest: /etc/docker/daemon.json
 
-- name: Deploying Portainer.io as Service in the Swarm
+- name: Deploying Portainer.io as container master node
   hosts: swarmManagers[0]
   become: true
 
@@ -69,11 +66,4 @@
     
     - name: Starting Portainer.io service
       command: >
-        docker service create \
-        --name portainer \
-        --publish 9000:9000 \
-        --replicas=1 \
-        --constraint 'node.role == manager' \
-        --mount type=bind,src=//var/run/docker.sock,dst=/var/run/docker.sock \
-        --mount type=bind,src=/mnt/portainer-volume,dst=/data \
-        portainer/portainer -H unix:///var/run/docker.sock --no-auth
+        docker run -d -p 8000:8000 -p 9000:9000 --name=portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v /mnt/portainer-volume:/data portainer/portainer -H unix:///var/run/docker.sock --no-auth
