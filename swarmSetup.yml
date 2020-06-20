@@ -51,7 +51,7 @@
   tasks:
     - name: Adding insecure registry server into /etc/docker/daemon.json
       copy: 
-        content: "{ \"insecure-registries\": [ {{ hostvars[groups['swarmManagers'][0]].ansible_default_ipv4.address }}:5000 ] }"
+        content: "{\n\t\"insecure-registries\": [ \"{{ hostvars[groups['swarmManagers'][0]].ansible_default_ipv4.address }}:5000\"]\n}"
         dest: /etc/docker/daemon.json
 
 - name: Deploying Portainer.io as container master node
